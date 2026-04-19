@@ -18,7 +18,6 @@ app.add_middleware(
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# ── Helper to build EfficientNet-B0 classifier ──
 def build_model(weights_path):
     model = models.efficientnet_b0(weights=None)
     model.classifier = nn.Sequential(
@@ -34,12 +33,10 @@ def build_model(weights_path):
     model.eval()
     return model
 
-# Load both models
 face_model    = build_model('deepfake_detector_v2.pth')
 picture_model = build_model('picture_model.pth')
 print("Both models loaded!")
 
-# Image transform
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -66,19 +63,26 @@ async def detect(file: UploadFile = File(...)):
     face_score    = predict(face_model, image)
     picture_score = predict(picture_model, image)
 
-    # Combine scores — face model 70%, picture model 30%
-    combined_score = (face_score * 0.7) + (picture_score * 0.3)
+    # Each model votes independently
+    face_label    = "REAL" if face_score >= 0.5 else "FAKE"
+    picture_label = "REAL" if picture_score >= 0.5 else "FAKE"
 
-    # Determine label
-    if combined_score >= 0.7:
-        label = "REAL"
-        confidence = combined_score
-    elif combined_score <= 0.3:
-        label = "FAKE"
-        confidence = 1 - combined_score
+    # Both agree → use average confidence
+    if face_label == picture_label:
+        label = face_label
+        if label == "REAL":
+            confidence = (face_score + picture_score) / 2
+        else:
+            confidence = ((1 - face_score) + (1 - picture_score)) / 2
+
     else:
-        label = "UNCERTAIN"
-        confidence = abs(combined_score - 0.5) * 2
+        # Disagree → trust face model since it has higher accuracy (88% vs 92%)
+        # but lower confidence means uncertain
+        label = face_label
+        if label == "REAL":
+            confidence = face_score * 0.7
+        else:
+            confidence = (1 - face_score) * 0.7
 
     return {
         "label": label,

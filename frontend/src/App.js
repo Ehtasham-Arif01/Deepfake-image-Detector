@@ -19,10 +19,8 @@ function App() {
     if (!image) return;
     setLoading(true);
     setResult(null);
-
     const formData = new FormData();
     formData.append("file", image);
-
     try {
       const response = await fetch("http://127.0.0.1:8000/api/detect", {
         method: "POST",
@@ -33,8 +31,19 @@ function App() {
     } catch (error) {
       alert("Error connecting to backend. Make sure FastAPI is running.");
     }
-
     setLoading(false);
+  };
+
+  const getColor = (label) => {
+    if (label === "REAL") return "#4caf50";
+    if (label === "FAKE") return "#f44336";
+    return "#ff9800";
+  };
+
+  const getEmoji = (label) => {
+    if (label === "REAL") return "✅";
+    if (label === "FAKE") return "❌";
+    return "⚠️";
   };
 
   return (
@@ -42,11 +51,9 @@ function App() {
       display: "flex", flexDirection: "column", alignItems: "center",
       justifyContent: "center", fontFamily: "Arial, sans-serif", padding: "20px" }}>
 
-      <h1 style={{ fontSize: "2rem", marginBottom: "8px" }}>
-        🔍 Deepfake Detector
-      </h1>
-      <p style={{ color: "#aaa", marginBottom: "30px" }}>
-        Upload an image to check if it is real or AI-generated
+      <h1 style={{ fontSize: "2rem", marginBottom: "4px" }}>🔍 Deepfake Detector</h1>
+      <p style={{ color: "#aaa", marginBottom: "30px", textAlign: "center" }}>
+        Dual-model AI system — Face Model + Picture Model
       </p>
 
       {/* Upload Box */}
@@ -78,21 +85,54 @@ function App() {
 
       {/* Result */}
       {result && (
-        <div style={{ background: result.label === "REAL" ? "#0f2f0f" : "#2f0f0f",
-          border: `2px solid ${result.label === "REAL" ? "#4caf50" : "#f44336"}`,
+        <div style={{ background: "#1a1a1a", border: `2px solid ${getColor(result.label)}`,
           borderRadius: "12px", padding: "24px", textAlign: "center",
           width: "100%", maxWidth: "480px" }}>
-          <div style={{ fontSize: "3rem" }}>
-            {result.label === "REAL" ? "✅" : "❌"}
-          </div>
-          <h2 style={{ color: result.label === "REAL" ? "#4caf50" : "#f44336",
-            fontSize: "2rem", margin: "8px 0" }}>
+
+          {/* Main verdict */}
+          <div style={{ fontSize: "3rem" }}>{getEmoji(result.label)}</div>
+          <h2 style={{ color: getColor(result.label), fontSize: "2rem", margin: "8px 0" }}>
             {result.label}
           </h2>
-          <p style={{ color: "#ccc", fontSize: "1.1rem" }}>
-            Confidence: <strong>{result.confidence}%</strong>
+          <p style={{ color: "#ccc", fontSize: "1.1rem", marginBottom: "20px" }}>
+            Combined Confidence: <strong>{result.confidence}%</strong>
           </p>
-          <p style={{ color: "#888", fontSize: "0.85rem", marginTop: "8px" }}>
+
+          {/* Divider */}
+          <hr style={{ border: "1px solid #333", marginBottom: "16px" }} />
+
+          {/* Individual model scores */}
+          <p style={{ color: "#aaa", fontSize: "0.85rem", marginBottom: "12px" }}>
+            Individual Model Scores
+          </p>
+
+          {/* Face model score */}
+          <div style={{ marginBottom: "12px", textAlign: "left" }}>
+            <div style={{ display: "flex", justifyContent: "space-between",
+              marginBottom: "4px" }}>
+              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>🧠 Face Model</span>
+              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>{result.face_score}%</span>
+            </div>
+            <div style={{ background: "#333", borderRadius: "4px", height: "8px" }}>
+              <div style={{ background: result.face_score >= 50 ? "#4caf50" : "#f44336",
+                width: `${result.face_score}%`, height: "100%", borderRadius: "4px" }} />
+            </div>
+          </div>
+
+          {/* Picture model score */}
+          <div style={{ textAlign: "left" }}>
+            <div style={{ display: "flex", justifyContent: "space-between",
+              marginBottom: "4px" }}>
+              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>🖼️ Picture Model</span>
+              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>{result.picture_score}%</span>
+            </div>
+            <div style={{ background: "#333", borderRadius: "4px", height: "8px" }}>
+              <div style={{ background: result.picture_score >= 50 ? "#4caf50" : "#f44336",
+                width: `${result.picture_score}%`, height: "100%", borderRadius: "4px" }} />
+            </div>
+          </div>
+
+          <p style={{ color: "#555", fontSize: "0.8rem", marginTop: "16px" }}>
             {result.filename}
           </p>
         </div>
