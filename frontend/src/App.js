@@ -1,5 +1,22 @@
 import { useState } from "react";
 
+function ScoreBar({ label, emoji, score, invert = false }) {
+  const value = invert ? 100 - score : score;
+  const color = value >= 50 ? "#4caf50" : "#f44336";
+  return (
+    <div style={{ marginBottom: "12px", textAlign: "left" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+        <span style={{ color: "#ccc", fontSize: "0.9rem" }}>{emoji} {label}</span>
+        <span style={{ color: "#ccc", fontSize: "0.9rem" }}>{score}%</span>
+      </div>
+      <div style={{ background: "#333", borderRadius: "4px", height: "8px" }}>
+        <div style={{ background: color, width: `${value}%`,
+          height: "100%", borderRadius: "4px", transition: "width 0.5s" }} />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -52,8 +69,8 @@ function App() {
       justifyContent: "center", fontFamily: "Arial, sans-serif", padding: "20px" }}>
 
       <h1 style={{ fontSize: "2rem", marginBottom: "4px" }}>🔍 Deepfake Detector</h1>
-      <p style={{ color: "#aaa", marginBottom: "30px", textAlign: "center" }}>
-        Dual-model AI system — Face Model + Picture Model
+      <p style={{ color: "#aaa", marginBottom: "8px", textAlign: "center" }}>
+        Triple analysis — Face Model + Picture Model + ELA
       </p>
 
       {/* Upload Box */}
@@ -63,11 +80,12 @@ function App() {
         onClick={() => document.getElementById('fileInput').click()}>
         {preview ? (
           <img src={preview} alt="preview" style={{ maxWidth: "100%",
-            maxHeight: "280px", borderRadius: "8px" }} />
+            maxHeight: "260px", borderRadius: "8px" }} />
         ) : (
           <div>
             <div style={{ fontSize: "3rem" }}>📁</div>
             <p style={{ color: "#aaa" }}>Click to upload an image</p>
+            <p style={{ color: "#666", fontSize: "0.8rem" }}>JPG, PNG, WEBP supported</p>
           </div>
         )}
         <input id="fileInput" type="file" accept="image/*"
@@ -79,8 +97,8 @@ function App() {
         style={{ background: image ? "#6c63ff" : "#333", color: "white",
           border: "none", padding: "12px 40px", borderRadius: "8px",
           fontSize: "1rem", cursor: image ? "pointer" : "not-allowed",
-          marginBottom: "24px" }}>
-        {loading ? "Analyzing..." : "Detect"}
+          marginBottom: "24px", transition: "background 0.3s" }}>
+        {loading ? "⏳ Analyzing..." : "🔍 Detect"}
       </button>
 
       {/* Result */}
@@ -89,48 +107,40 @@ function App() {
           borderRadius: "12px", padding: "24px", textAlign: "center",
           width: "100%", maxWidth: "480px" }}>
 
-          {/* Main verdict */}
+          {/* Verdict */}
           <div style={{ fontSize: "3rem" }}>{getEmoji(result.label)}</div>
           <h2 style={{ color: getColor(result.label), fontSize: "2rem", margin: "8px 0" }}>
             {result.label}
           </h2>
-          <p style={{ color: "#ccc", fontSize: "1.1rem", marginBottom: "20px" }}>
-            Combined Confidence: <strong>{result.confidence}%</strong>
+          <p style={{ color: "#ccc", fontSize: "1.1rem", marginBottom: "8px" }}>
+            Confidence: <strong>{result.confidence}%</strong>
           </p>
 
-          {/* Divider */}
+          {/* Face detected badge */}
+          <div style={{ display: "inline-block", background: result.face_detected ? "#1a3a1a" : "#3a1a1a",
+            border: `1px solid ${result.face_detected ? "#4caf50" : "#f44336"}`,
+            borderRadius: "20px", padding: "4px 12px", fontSize: "0.8rem",
+            color: result.face_detected ? "#4caf50" : "#f44336", marginBottom: "20px" }}>
+            {result.face_detected ? "👤 Face Detected" : "🖼️ No Face Detected"}
+          </div>
+
           <hr style={{ border: "1px solid #333", marginBottom: "16px" }} />
 
-          {/* Individual model scores */}
+          {/* Score bars */}
           <p style={{ color: "#aaa", fontSize: "0.85rem", marginBottom: "12px" }}>
-            Individual Model Scores
+            Analysis Breakdown
           </p>
 
-          {/* Face model score */}
-          <div style={{ marginBottom: "12px", textAlign: "left" }}>
-            <div style={{ display: "flex", justifyContent: "space-between",
-              marginBottom: "4px" }}>
-              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>🧠 Face Model</span>
-              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>{result.face_score}%</span>
-            </div>
-            <div style={{ background: "#333", borderRadius: "4px", height: "8px" }}>
-              <div style={{ background: result.face_score >= 50 ? "#4caf50" : "#f44336",
-                width: `${result.face_score}%`, height: "100%", borderRadius: "4px" }} />
-            </div>
-          </div>
+          {result.face_score !== null && (
+            <ScoreBar label="Face Model" emoji="🧠"
+              score={result.face_score} />
+          )}
 
-          {/* Picture model score */}
-          <div style={{ textAlign: "left" }}>
-            <div style={{ display: "flex", justifyContent: "space-between",
-              marginBottom: "4px" }}>
-              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>🖼️ Picture Model</span>
-              <span style={{ color: "#ccc", fontSize: "0.9rem" }}>{result.picture_score}%</span>
-            </div>
-            <div style={{ background: "#333", borderRadius: "4px", height: "8px" }}>
-              <div style={{ background: result.picture_score >= 50 ? "#4caf50" : "#f44336",
-                width: `${result.picture_score}%`, height: "100%", borderRadius: "4px" }} />
-            </div>
-          </div>
+          <ScoreBar label="Picture Model" emoji="🖼️"
+            score={result.picture_score} />
+
+          <ScoreBar label="ELA (Manipulation)" emoji="🔬"
+            score={result.ela_score} invert={true} />
 
           <p style={{ color: "#555", fontSize: "0.8rem", marginTop: "16px" }}>
             {result.filename}
