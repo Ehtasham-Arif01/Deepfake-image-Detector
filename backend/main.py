@@ -36,9 +36,8 @@ def build_model(weights_path):
     model.eval()
     return model
 
-face_model    = build_model('deepfake_detector_v2.pth')
-picture_model = build_model('picture_model.pth')
-print("Both models loaded!")
+face_model    = build_model('../models/deepfake_detector_v2.pth')
+picture_model = build_model('../models/picture_model.pth')
 
 # ── Image transform ──
 transform = transforms.Compose([
